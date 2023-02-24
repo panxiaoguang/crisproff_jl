@@ -220,22 +220,16 @@ julia -t <Threads> CRISPRspec_CRISPRoff_pipeline.jl --guides <guides.fa> --risea
 This is a software build by Xiaoguang based on the python version!
 """
 @main function compute_CRISPRoff(; guides::String="none", risearch_results_folder::String="none", CRISPRoff_scores_folder::String="none", specificity_report::String="none")
-    @info "#Process FATSA sequences!"
     guideSeqs = collect(open(FASTA.Reader, guides))
-    @info "#START: PIPELINE RUN HAS STARTED."
     open(specificity_report, "w") do f
         println(f, join(["Guide_ID", "Guide_sequence", "Genomic_position", "CRISPRspec_specificity_score", "MM_counts", "MM_detailed"], "\t"))
         Threads.@threads for guide in guideSeqs
             GuideID = FASTX.identifier(guide)
             GuideSeq = convert(String, FASTA.sequence(guide))
             risearch_file = joinpath(risearch_results_folder, "risearch_$(GuideID).out.gz")
-            @info "Read offtarget file from $(risearch_file)!"
             offSeqs, off_counts, ontargets = read_risearch_results(GuideSeq, risearch_file)
-            @info "Compute CRISPRspec specificity score for $(GuideID)!"
             on_prob, CRISPRoff_scored_offs = compute_CRISPRspec(ontargets[1], offSeqs; pos_weight=true, pam_corr=true, grna_folding=true, dna_opening=true, dna_pos_wgh=false)
             CRISPRspec = on_prob > 0 ? string(-1.0 * log10(on_prob)) : "INF"
-            @info "Write CRISPRoff scores for $(GuideID)!"
-            ### write off scores
             offscore_file = joinpath(CRISPRoff_scores_folder, "$(ontargets[1].Seq).CRISPRoff.tsv")
             open(offscore_file, "w") do IO
                 println(IO, join(["chromosome", "start", "end", "off_target_seq", "CRISPRoff_score", "strand"], "\t"))
@@ -243,10 +237,8 @@ This is a software build by Xiaoguang based on the python version!
                     println(IO, join([scored.Chrom, string(scored.Start), string(scored.End), scored.Seq, string(scored.Eng), string(scored.Strand)], "\t"))
                 end
             end
-            @info "Compute MM counts for $(GuideID)!"
-            MM_counts = join(string.(map(x -> sum(x), [map(x -> x[i], values(off_counts)) for i = 1:6])), ",")
+            MM_counts = join(string.(map(x -> sum(x), [map(x -> x[i], values(off_counts)) for i = 1:7])), ",")
             MM_detailed = join([string("N", pam, ":", join(string.(off_counts[pam]), ",")) for pam = ["GG", "AG", "GA"]], ";")
-            @info "Write specificity report for $(GuideID)!"
             for ontarget in ontargets
                 coord = string(ontarget.Chrom, ":", ontarget.Start, "-", ontarget.End)
                 println(f, join([GuideID, ontarget.Seq, coord, CRISPRspec, MM_counts, MM_detailed], "\t"))

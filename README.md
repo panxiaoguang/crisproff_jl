@@ -43,6 +43,7 @@ julia -t <Threads> CRISPRspec_CRISPRoff_pipeline.jl --guides <guides.fa> --risea
 #### Finally
 
 It should have higher performance than python version!
+Because the julia version use code just transformed from python, **so for about 500 gRNAs, 4 threads in Julia is equal to python version.** If you need it run quickly, you should use more threads!
 
 #### contact
 
