@@ -9,7 +9,8 @@ This is a Julia implementation for [crisproff](https://github.com/RTH-tools/cris
 - Julia 
 - JLD2
 - BioSequences
-- GZip
+- TranscodingStreams
+- CodecZlib
 - Fire
 - FASTX
 - ViennaRNA_jll
@@ -22,7 +23,7 @@ add JLD2
 ```
 
 #### method 
-In order to process tons of gRNAs, the Julia version comes up here. So the software only supports FASTA sequences as input. In addition, I also think that you already use [search2](https://rth.dk/resources/risearch/) to search the genome to find all off-targets.
+In order to process tons of gRNAs, the Julia version comes up here. So the software only supports FASTA sequences as input. In addition, I also think that you already use [Risearch2](https://rth.dk/resources/risearch/) to search the genome to find all off-targets.
 
 ```bash
 julia CRISPRspec_CRISPRoff_pipeline.jl --guides <guides.fa> --risearch-results-folder <folder> --CRISPRoff-scores-folder <folder> --specificity-report <file>
@@ -43,7 +44,10 @@ julia -t <Threads> CRISPRspec_CRISPRoff_pipeline.jl --guides <guides.fa> --risea
 #### Finally
 
 It should have higher performance than python version!
-Because the julia version use code just transformed from python, **so for about 500 gRNAs, 4 threads in Julia is equal to python version.** If you need it run quickly, you should use more threads!
+**For 553 gRNAs, python version need run 2189s to get the results.**
+**For 553 gRNAs, julia version need run 1311s to get the results.but need 10 threads.**
+
+> So, Julia version is 40% faster than python version when it use 10 threads! Julia version is not faster enough than python because of the most cost of time is from reading off-targets from Gzip file!
 
 #### contact
 
