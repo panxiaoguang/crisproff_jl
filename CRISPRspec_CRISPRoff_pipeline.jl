@@ -21,7 +21,7 @@ function get_rnafold_eng(seq::String)
     Base.cconvert(Float64, eng)
 end
 # Stacking energy is distributed to positions only for interior loops
-function calcRNADNAenergy(guideSeq::String, otSeq::String,RNA_DNA)
+function calcRNADNAenergy(guideSeq::String, otSeq::String, RNA_DNA)
     RI_REV_NT_MAP = Dict('-' => ' ', 'a' => 'T', 'A' => 'T', 'c' => 'G', 'C' => 'G', 'g' => 'C', 'G' => 'C',
         't' => 'A', 'T' => 'A', 'u' => 'A', 'U' => 'A', 'n' => 'N', 'N' => 'N')
     RNA_DNA_internal_loop = Dict(4 => 3.2, 5 => 3.555, 6 => 3.725, 7 => 3.975, 8 => 4.16, 9 => 4.33, 10 => 4.495, 11 => 4.6, 12 => 4.7)
@@ -34,7 +34,7 @@ function calcRNADNAenergy(guideSeq::String, otSeq::String,RNA_DNA)
         'C' => Dict('A' => false, 'C' => false, 'G' => true, 'T' => false),
         'G' => Dict('A' => false, 'C' => true, 'G' => false, 'T' => false),
         'T' => Dict('A' => true, 'C' => false, 'G' => false, 'T' => false))
-    for i in 1:length(seq)
+    for i in eachindex(seq)
         if MATCH[guideSeq[i]][seq[i]]
             if spos == -1
                 spos = i
@@ -84,14 +84,18 @@ function calcDNAopeningScore(otSeq::String)
         "CG" => Dict("GC" => -2.17), "GC" => Dict("CG" => -2.24), "GG" => Dict("CC" => -1.84), "CC" => Dict("GG" => -1.84))
     seq = uppercase(otSeq[1:end-3])
     energy = fill(0.0, length(seq))
-    for i in 2:length(seq)
-        energy[i] = RI_DNA_DNA_NN[seq[i-1]*seq[i]][RI_REV_NT_MAP[seq[i-1]]*RI_REV_NT_MAP[seq[i]]]
+    for i in eachindex(seq)
+        if i == 1
+            continue
+        else
+            energy[i] = RI_DNA_DNA_NN[seq[i-1]*seq[i]][RI_REV_NT_MAP[seq[i-1]]*RI_REV_NT_MAP[seq[i]]]
+        end
     end
     energy
 end
 ############# Get interaction energy ##################
 #Employ all the necessary computations on the score vector to get the final free energy
-function get_eng(ontarget::CRISPRoff_scores, offSeq::CRISPRoff_scores,mfe::Float64,RNA_DNA; pos_weight=false, pam_corr=false, grna_folding=false, dna_opening=false, dna_pos_wgh=false)
+function get_eng(ontarget::CRISPRoff_scores, offSeq::CRISPRoff_scores, mfe::Float64, RNA_DNA; pos_weight=false, pam_corr=false, grna_folding=false, dna_opening=false, dna_pos_wgh=false)
     POS_WGH = [1.80067099242007, 1.95666668400006, 1.90472004401173, 2.13047270152512, 1.37853848098249, 1.46460783730408, 1.0, 1.387220146823, 1.51401000729362, 1.98058344620751, 1.87939168587699, 1.7222593588838, 2.02228445489326, 1.92692086621503, 2.08041972716723, 1.94496755678903, 2.14539112893591, 2.04277109036766, 2.24911493451185, 2.25]
     DNA_POS_WGH = [1.22245576981774, 1.24561578622024, 1.37883177517399, 1.39146340276523, 1.24308180746857, 1.09598194424544, 1.0, 1.11695025382169, 1.11589045394936, 1.22243614188218, 1.21317477033274, 1.07125942316357, 1.25205871414019, 1.21445408158483, 1.20971491326295, 1.21076785001579, 1.2480898972246, 1.40301355270318, 1.41221084925493, 1.4]
     pam_ratios = Dict("GGG" => 1.0, "AGG" => 1.0, "CGG" => 1.0, "TGG" => 1.0, "GAG" => 0.9, "AAG" => 0.9, "CAG" => 0.9, "TAG" => 0.9, "GGA" => 0.8, "AGA" => 0.8, "CGA" => 0.8, "TGA" => 0.8, "OTHERS" => 0.0)
@@ -141,13 +145,13 @@ function compute_CRISPRspec(ontarget::CRISPRoff_scores, offSeqs::Vector{CRISPRof
     Threads.@threads for offSeq in offSeqs
         offSeq_eng = get_eng(ontarget, offSeq, mfe, RNA_DNA; pos_weight=pos_weight, pam_corr=pam_corr, grna_folding=grna_folding, dna_opening=dna_opening, dna_pos_wgh=dna_pos_wgh)
         lock(lk) do
-        push!(scores,offSeq_eng)
+            push!(scores, offSeq_eng)
         end
     end
-    pf = sum([exp(PAR_BETA*x.Eng) for x in scores])
+    pf = sum([exp(PAR_BETA * x.Eng) for x in scores])
     on_eng = get_eng(ontarget, ontarget, mfe, RNA_DNA; pos_weight=pos_weight, pam_corr=pam_corr, grna_folding=grna_folding, dna_opening=dna_opening, dna_pos_wgh=dna_pos_wgh)
     on = exp(PAR_BETA * (on_eng.Eng))
-    push!(scores,on_eng)
+    push!(scores, on_eng)
     pf / (pf + on), scores
 end
 ## complement sequence
@@ -184,7 +188,7 @@ function read_risearch_results(guideSeq::String, ris_file::String; noPAM_given::
                     tst = "+"
                 end
                 # determine and save the number of mismatches for this guide
-                mm_count = sum(offseq[i] != guideSeq[i] for i in 1:length(offseq))
+                mm_count = sum(offseq[i] != guideSeq[i] for i in eachindex(offseq))
                 if count_mms
                     if mm_count < 7
                         off_counts[PAM[2:3]][mm_count+1] += 1
