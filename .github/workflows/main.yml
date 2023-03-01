@@ -1,0 +1,26 @@
+name: Run tests
+
+on: 
+  workflow_dispatch
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        julia-version: ['1.8.1']
+        julia-arch: [x64]
+        os: [ubuntu-latest]
+
+    steps:
+      - name: Set up Julia 
+        uses: julia-actions/setup-julia@v1.9.2
+        with:
+          version: ${{ matrix.julia-version }}
+          arch: ${{ matrix.julia-arch }}
+      - name: Install dependencies
+        run: |
+          julia -e 'using Pkg; Pkg.add.(["JLD2","BioSequences","TranscodingStreams","CodecZlib","Fire","FASTX","ViennaRNA_jll"])'
+      - name: test on bash
+        run: |
+          bash test.sh
