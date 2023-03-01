@@ -1,5 +1,7 @@
 ### crisproff_jl
 
+![![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/panxiaoguang/crisproff_jl/main.yml)](https://github.com/panxiaoguang/crisproff_jl/actions/workflows/main.yml)
+
 This is a Julia implementation for [crisproff](https://github.com/RTH-tools/crisproff). For more details on the algorithm, please see their official repository.
 
 ### Usage 
