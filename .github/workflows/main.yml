@@ -13,6 +13,8 @@ jobs:
         os: [ubuntu-latest]
 
     steps:
+      - name: CheckOut
+        uses: actions/checkout@v3
       - name: Set up Julia 
         uses: julia-actions/setup-julia@v1.9.2
         with:
@@ -23,4 +25,4 @@ jobs:
           julia -e 'using Pkg; Pkg.add.(["JLD2","BioSequences","TranscodingStreams","CodecZlib","Fire","FASTX","ViennaRNA_jll"])'
       - name: test on bash
         run: |
-          bash test.sh
+          bash ./test.sh
