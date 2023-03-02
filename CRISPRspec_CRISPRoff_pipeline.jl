@@ -1,3 +1,27 @@
+########################################################################
+#    ------CRISPRspec and CRISPRoff scores computation Pipeline----
+#
+#
+#  This file is a reimplementaion of CRISPRoff using julia by Xiaoguang Pan
+#  
+#  copyright (c) 2018, 2021 by the contributors,
+#  (see https://github.com/RTH-tools/crisproff/blob/master/AUTHORS)
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  It is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this script, see file COPYING.
+#  If not, see <http://www.gnu.org/licenses/>.
+##########################################################################
+
 using JLD2
 using BioSequences
 using TranscodingStreams, CodecZlib  ## change GZip to TranscodingStream
@@ -214,7 +238,7 @@ Usage:
 ```
 julia -t <Threads> CRISPRspec_CRISPRoff_pipeline.jl --guides <guides.fa> --risearch_results_folder <folder> --CRISPRoff_scores_folder <folder> --specificity_report <file>
 ```
-This is a software build by Xiaoguang based on the python version!
+This is a software build by Xiaoguang based on the python version of CRISPRoff (https://github.com/RTH-tools/crisproff/blob/master/AUTHORS)!
 """
 @main function compute_CRISPRoff(; guides::String="none", risearch_results_folder::String="none", CRISPRoff_scores_folder::String="none", specificity_report::String="none")
     @info "Pipeline start! load energy indices!"

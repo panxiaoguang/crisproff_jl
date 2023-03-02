@@ -49,6 +49,13 @@ It should have higher performance than python version!
 
 > So, Julia version is 40% faster than python version when it use 10 threads! Julia version is not faster enough than python because of the most cost of time is from reading off-targets from Gzip file!
 
+#### Citation
+
+If you find this software useful for your research, please cite the following work:
+
+CRISPR-Cas9 off-targeting assessment with nucleic acid duplex energy parameters
+Alkan F, Wenzel A, Anthon C, Havgaard JH, Gorodkin J Genome Biol. 2018 Oct 26;19(1):177
+
 #### contact
 
 xiaoguang.pan@bio.ku.dk
