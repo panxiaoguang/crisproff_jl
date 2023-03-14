@@ -28,17 +28,7 @@ using TranscodingStreams, CodecZlib  ## change GZip to TranscodingStream
 using Fire
 using FASTX
 using ViennaRNA_jll
-##############################################################
-########### Data structure to store off energy ###############
-##############################################################
-struct CRISPRoff_scores
-    Chrom::String
-    Start::Int64
-    End::Int64
-    Strand::Char
-    Seq::String
-    Eng::Float64
-end
+
 ########## gRNA folding ######################################
 function get_rnafold_eng(seq::String)
     eng = ccall((:vrna_fold, ViennaRNA_jll.libRNA), Cfloat, (Cstring,), seq)
@@ -119,7 +109,7 @@ function calcDNAopeningScore(otSeq::String)
 end
 ############# Get interaction energy ##################
 #Employ all the necessary computations on the score vector to get the final free energy
-function get_eng(ontarget::CRISPRoff_scores, offSeq::CRISPRoff_scores, mfe::Float64, RNA_DNA; pos_weight=false, pam_corr=false, grna_folding=false, dna_opening=false, dna_pos_wgh=false)
+function get_eng(ontarget::NamedTuple{(:Chrom, :Start, :End, :Strand, :Seq, :Eng), Tuple{String, Int64, Int64, Char, String, Float64}}, offSeq::NamedTuple{(:Chrom, :Start, :End, :Strand, :Seq, :Eng), Tuple{String, Int64, Int64, Char, String, Float64}}, mfe::Float64, RNA_DNA; pos_weight=false, pam_corr=false, grna_folding=false, dna_opening=false, dna_pos_wgh=false)
     POS_WGH = [1.80067099242007, 1.95666668400006, 1.90472004401173, 2.13047270152512, 1.37853848098249, 1.46460783730408, 1.0, 1.387220146823, 1.51401000729362, 1.98058344620751, 1.87939168587699, 1.7222593588838, 2.02228445489326, 1.92692086621503, 2.08041972716723, 1.94496755678903, 2.14539112893591, 2.04277109036766, 2.24911493451185, 2.25]
     DNA_POS_WGH = [1.22245576981774, 1.24561578622024, 1.37883177517399, 1.39146340276523, 1.24308180746857, 1.09598194424544, 1.0, 1.11695025382169, 1.11589045394936, 1.22243614188218, 1.21317477033274, 1.07125942316357, 1.25205871414019, 1.21445408158483, 1.20971491326295, 1.21076785001579, 1.2480898972246, 1.40301355270318, 1.41221084925493, 1.4]
     pam_ratios = Dict("GGG" => 1.0, "AGG" => 1.0, "CGG" => 1.0, "TGG" => 1.0, "GAG" => 0.9, "AAG" => 0.9, "CAG" => 0.9, "TAG" => 0.9, "GGA" => 0.8, "AGA" => 0.8, "CGA" => 0.8, "TGA" => 0.8, "OTHERS" => 0.0)
@@ -156,14 +146,14 @@ function get_eng(ontarget::CRISPRoff_scores, offSeq::CRISPRoff_scores, mfe::Floa
             off = off * pam_ratios["OTHERS"]
         end
     end
-    CRISPRoff_scores(offSeq.Chrom, offSeq.Start, offSeq.End, offSeq.Strand, offSeq.Seq, off)
+    (Chrom=offSeq.Chrom, Start=offSeq.Start, End=offSeq.End, Strand=offSeq.Strand, Seq=offSeq.Seq, Eng=off)
 end
 ## Compute POFF for the given grna and its off-targets ##
-function compute_CRISPRspec(ontarget::CRISPRoff_scores, offSeqs::Vector{CRISPRoff_scores}, RNA_DNA; pos_weight=false, pam_corr=false, grna_folding=false, dna_opening=false, dna_pos_wgh=false)
+function compute_CRISPRspec(ontarget::NamedTuple{(:Chrom, :Start, :End, :Strand, :Seq, :Eng), Tuple{String, Int64, Int64, Char, String, Float64}}, offSeqs::Vector{NamedTuple{(:Chrom, :Start, :End, :Strand, :Seq, :Eng), Tuple{String, Int64, Int64, Char, String, Float64}}}, RNA_DNA; pos_weight=false, pam_corr=false, grna_folding=false, dna_opening=false, dna_pos_wgh=false)
     on = zero(Float64)
     PAR_BETA = 1.0 / (0.001987 * 310.15)
     nums = length(offSeqs) + 1
-    scores = Vector{CRISPRoff_scores}()
+    scores = Vector{NamedTuple{(:Chrom, :Start, :End, :Strand, :Seq, :Eng), Tuple{String, Int64, Int64, Char, String, Float64}}}()
     mfe = get_rnafold_eng(ontarget.Seq[1:20])
     lk = ReentrantLock()
     Threads.@threads for offSeq in offSeqs
@@ -191,8 +181,8 @@ end
 ## read off-targets files
 function read_risearch_results(guideSeq::String, ris_file::String; noPAM_given::Bool=false, count_mms::Bool=true)
     off_counts = Dict("GG" => fill(0, 7), "AG" => fill(0, 7), "GA" => fill(0, 7))
-    offSeqs = CRISPRoff_scores[]
-    on_targets = CRISPRoff_scores[]
+    offSeqs = NamedTuple{(:Chrom, :Start, :End, :Strand, :Seq, :Eng), Tuple{String, Int64, Int64, Char, String, Float64}}[]
+    on_targets = NamedTuple{(:Chrom, :Start, :End, :Strand, :Seq, :Eng), Tuple{String, Int64, Int64, Char, String, Float64}}[]
     stream = TranscodingStream(GzipDecompressor(), open(ris_file))
     for line in eachline(stream)
         cols = split(line, "\t")
@@ -220,9 +210,9 @@ function read_risearch_results(guideSeq::String, ris_file::String; noPAM_given::
                 end
                 if mm_count < 7
                     if (noPAM_given && (guideSeq != offseq)) || ((!noPAM_given) && (guideSeq != offseq * PAM))
-                        push!(offSeqs, CRISPRoff_scores(tc, ts, te, tst[1], offseq * PAM, 0.0))
+                        push!(offSeqs, (Chrom=tc, Start=ts, End=te, Strand=tst[1], Seq=offseq * PAM, Eng=0.0))
                     else
-                        push!(on_targets, CRISPRoff_scores(tc, ts, te, tst[1], offseq * PAM, 0.0))
+                        push!(on_targets, (Chrom=tc, Start=ts, End=te, Strand=tst[1], Seq=offseq * PAM, Eng=0.0))
                     end
                 end
             end
@@ -236,7 +226,7 @@ end
 Usage:
 
 ```
-julia -t <Threads> CRISPRspec_CRISPRoff_pipeline.jl --guides <guides.fa> --risearch_results_folder <folder> --CRISPRoff_scores_folder <folder> --specificity_report <file>
+julia -t <Threads> CRISPRspec-CRISPRoff-pipeline.jl --guides <guides.fa> --risearch-results-folder <folder> --CRISPRoff-scores-folder <folder> --specificity-report <file>
 ```
 This is a software build by Xiaoguang based on the python version of CRISPRoff (https://github.com/RTH-tools/crisproff/blob/master/AUTHORS)!
 """
